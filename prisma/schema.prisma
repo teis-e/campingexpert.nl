@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("PRISMA_DATABASE_URL")
+  directUrl = env("POSTGRES_URL")
+}
+
+model Camping {
+  id                   Int       @id @default(autoincrement())
+  naam                 String
+  slug                 String    @unique
+  
+  // Location
+  land                 String    // Country (e.g., "Nederland", "Frankrijk")
+  landSlug             String    // URL-friendly (e.g., "nederland", "frankrijk")
+  regio                String?   // Region/Province
+  regioSlug            String?   // URL-friendly
+  plaats               String    // City/Town
+  
+  // Address
+  straat               String?
+  huisnummer           String?
+  postcode             String?
+  lat                  Float?
+  lon                  Float?
+  
+  // Contact
+  telefoon             String?
+  email                String?
+  website              String?
+  
+  // Google Places
+  googlePlaceId        String?   @unique
+  googleRating         Float?
+  googleReviewCount    Int?
+  
+  // Content
+  beschrijving         String?
+  fotoUrl              String?
+  fotoUrls             String[]  // Multiple photos
+  
+  // Pricing
+  prijsVanaf           Float?    // Price per night from
+  valuta               String    @default("EUR")
+  
+  // Capacity
+  aantalPlaatsen       Int?      // Total camping spots
+  aantalHuisjes        Int?      // Rental accommodations
+  
+  // Facilities
+  heeftZwembad         Boolean   @default(false)
+  heeftWifi            Boolean   @default(false)
+  heeftRestaurant      Boolean   @default(false)
+  heeftSupermarkt      Boolean   @default(false)
+  heeftAnimatie        Boolean   @default(false)
+  heeftHuisdieren      Boolean   @default(false)
+  heeftSpeeltuin       Boolean   @default(false)
+  heeftWasmachine      Boolean   @default(false)
+  heeftFietsverhuur    Boolean   @default(false)
+  heeftStrand          Boolean   @default(false)
+  heeftVisvijver       Boolean   @default(false)
+  heeftGolfbaan        Boolean   @default(false)
+  heeftWellness        Boolean   @default(false)
+  
+  // Camping types
+  isNatuurcamping      Boolean   @default(false)
+  isLuxeCamping        Boolean   @default(false)
+  isFamiliecamping     Boolean   @default(false)
+  isNudistencamping    Boolean   @default(false)
+  
+  // Season
+  seizoenStart         String?   // e.g., "april"
+  seizoenEinde         String?   // e.g., "oktober"
+  jaarRondOpen         Boolean   @default(false)
+  
+  // Opening hours
+  openingHours         String[]
+  
+  // Meta
+  metaTitle            String?
+  metaDescription      String?
+  
+  // Status
+  actief               Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  
+  // Relation to Stadt
+  stadId               Int?
+  stad                 Stad?     @relation(fields: [stadId], references: [id])
+  
+  @@index([land, regio])
+  @@index([landSlug, regioSlug])
+  @@index([actief])
+}
+
+model Stad {
+  id                   Int       @id @default(autoincrement())
+  naam                 String
+  slug                 String    @unique
+  land                 String
+  landSlug             String
+  regio                String?
+  regioSlug            String?
+  provincie            String?
+  
+  lat                  Float?
+  lon                  Float?
+  
+  aantalCampings       Int       @default(0)
+  
+  beschrijving         String?
+  fotoUrl              String?
+  
+  metaTitle            String?
+  metaDescription      String?
+  
+  actief               Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  
+  campings             Camping[]
+  
+  @@index([landSlug, regioSlug])
+}
+
+model Land {
+  id                   Int       @id @default(autoincrement())
+  naam                 String    @unique
+  slug                 String    @unique
+  naamEn               String?   // English name
+  
+  aantalCampings       Int       @default(0)
+  aantalRegios         Int       @default(0)
+  
+  beschrijving         String?
+  fotoUrl              String?
+  vlagUrl              String?   // Flag image
+  
+  metaTitle            String?
+  metaDescription      String?
+  
+  actief               Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+model Regio {
+  id                   Int       @id @default(autoincrement())
+  naam                 String
+  slug                 String
+  land                 String
+  landSlug             String
+  
+  aantalCampings       Int       @default(0)
+  
+  beschrijving         String?
+  fotoUrl              String?
+  
+  metaTitle            String?
+  metaDescription      String?
+  
+  actief               Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  
+  @@unique([landSlug, slug])
+  @@index([landSlug])
+}
