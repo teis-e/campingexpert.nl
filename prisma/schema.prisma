@@ -3,55 +3,71 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("PRISMA_DATABASE_URL")
-  directUrl = env("POSTGRES_URL")
+  provider = "postgresql"
 }
 
 model Camping {
   id                   Int       @id @default(autoincrement())
+  jetcampId            String?   @unique  // JetCamp external ID
   naam                 String
   slug                 String    @unique
   
   // Location
-  land                 String    // Country (e.g., "Nederland", "Frankrijk")
-  landSlug             String    // URL-friendly (e.g., "nederland", "frankrijk")
-  regio                String?   // Region/Province
-  regioSlug            String?   // URL-friendly
-  plaats               String    // City/Town
+  land                 String    // Country slug (e.g., "nederland", "frankrijk")
+  regio                String?   // Region/Province name
+  stad                 String?   // City/Town name
   
   // Address
-  straat               String?
-  huisnummer           String?
+  straat               String?   // Street + house number
   postcode             String?
-  lat                  Float?
-  lon                  Float?
+  latitude             Float?
+  longitude            Float?
   
   // Contact
   telefoon             String?
   email                String?
   website              String?
+  facebookUrl          String?
+  instagramUrl         String?
   
-  // Google Places
+  // Ratings (from JetCamp)
+  rating               Float?    // Customer rating (1-10)
+  aantalReviews        Int?      // Number of reviews
+  sterren              Int?      // Official star rating (1-5)
+  
+  // Google Places (for enrichment)
   googlePlaceId        String?   @unique
   googleRating         Float?
   googleReviewCount    Int?
   
   // Content
   beschrijving         String?
-  fotoUrl              String?
-  fotoUrls             String[]  // Multiple photos
+  fotoUrl              String?   // Main photo
+  fotoUrl480           String?   // 480px version
+  fotoUrl1024          String?   // 1024px version
+  fotoUrls             String[]  // Additional photos
   
   // Pricing
-  prijsVanaf           Float?    // Price per night from
+  prijsVanaf           Float?    // Price per night from (high season)
   valuta               String    @default("EUR")
   
   // Capacity
-  aantalPlaatsen       Int?      // Total camping spots
-  aantalHuisjes        Int?      // Rental accommodations
+  aantalPlaatsen       Int?      // Total spots
+  aantalStaanplaatsen  Int?      // Recreational pitches
+  aantalHuuraccommodaties Int?   // Rental accommodations
+  
+  // Accommodation types (from JetCamp facility_subs)
+  heeftStaanplaats     Boolean   @default(false)  // Camping pitch
+  heeftStacaravan      Boolean   @default(false)  // Mobile home
+  heeftChalet          Boolean   @default(false)  // Chalet/Bungalow
+  heeftGlamping        Boolean   @default(false)  // Safari tent / glamping
+  heeftTent            Boolean   @default(false)  // Furnished tent
+  heeftCamperplaats    Boolean   @default(false)  // Camper pitch
   
   // Facilities
   heeftZwembad         Boolean   @default(false)
+  heeftZwembadBuiten   Boolean   @default(false)
+  heeftZwembadBinnen   Boolean   @default(false)
   heeftWifi            Boolean   @default(false)
   heeftRestaurant      Boolean   @default(false)
   heeftSupermarkt      Boolean   @default(false)
@@ -61,23 +77,32 @@ model Camping {
   heeftWasmachine      Boolean   @default(false)
   heeftFietsverhuur    Boolean   @default(false)
   heeftStrand          Boolean   @default(false)
+  heeftStrandZee       Boolean   @default(false)
+  heeftStrandMeer      Boolean   @default(false)
   heeftVisvijver       Boolean   @default(false)
-  heeftGolfbaan        Boolean   @default(false)
   heeftWellness        Boolean   @default(false)
+  heeftPriveSanitair   Boolean   @default(false)
+  heeftGlijbaan        Boolean   @default(false)
+  heeftWaterpark       Boolean   @default(false)
   
   // Camping types
   isNatuurcamping      Boolean   @default(false)
   isLuxeCamping        Boolean   @default(false)
   isFamiliecamping     Boolean   @default(false)
+  isKindvriendelijk    Boolean   @default(false)
   isNudistencamping    Boolean   @default(false)
+  isMiniCamping        Boolean   @default(false)
+  isBoerderijcamping   Boolean   @default(false)
+  isCamperspot         Boolean   @default(false)
+  isVakantiepark       Boolean   @default(false)
+  
+  // External links
+  jetcampUrl           String?   // Full JetCamp URL
   
   // Season
-  seizoenStart         String?   // e.g., "april"
-  seizoenEinde         String?   // e.g., "oktober"
+  seizoenStart         String?
+  seizoenEinde         String?
   jaarRondOpen         Boolean   @default(false)
-  
-  // Opening hours
-  openingHours         String[]
   
   // Meta
   metaTitle            String?
@@ -88,27 +113,22 @@ model Camping {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   
-  // Relation to Stadt
-  stadId               Int?
-  stad                 Stad?     @relation(fields: [stadId], references: [id])
-  
+  @@index([land])
   @@index([land, regio])
-  @@index([landSlug, regioSlug])
   @@index([actief])
+  @@index([rating])
 }
 
 model Stad {
   id                   Int       @id @default(autoincrement())
   naam                 String
-  slug                 String    @unique
+  slug                 String
   land                 String
-  landSlug             String
   regio                String?
-  regioSlug            String?
   provincie            String?
   
-  lat                  Float?
-  lon                  Float?
+  latitude             Float?
+  longitude            Float?
   
   aantalCampings       Int       @default(0)
   
@@ -122,15 +142,14 @@ model Stad {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   
-  campings             Camping[]
-  
-  @@index([landSlug, regioSlug])
+  @@unique([land, slug])
+  @@index([land])
 }
 
 model Land {
   id                   Int       @id @default(autoincrement())
-  naam                 String    @unique
-  slug                 String    @unique
+  naam                 String    @unique  // Display name (e.g., "Frankrijk")
+  slug                 String    @unique  // URL slug (e.g., "frankrijk")
   naamEn               String?   // English name
   
   aantalCampings       Int       @default(0)
@@ -152,8 +171,7 @@ model Regio {
   id                   Int       @id @default(autoincrement())
   naam                 String
   slug                 String
-  land                 String
-  landSlug             String
+  land                 String    // Country slug
   
   aantalCampings       Int       @default(0)
   
@@ -167,6 +185,6 @@ model Regio {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   
-  @@unique([landSlug, slug])
-  @@index([landSlug])
+  @@unique([land, slug])
+  @@index([land])
 }

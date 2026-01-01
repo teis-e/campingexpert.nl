@@ -6,7 +6,10 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient() {
-  return new PrismaClient().$extends(withAccelerate());
+  // Use Accelerate URL for edge/serverless, direct URL for local scripts
+  return new PrismaClient({
+    datasourceUrl: process.env.PRISMA_DATABASE_URL,
+  }).$extends(withAccelerate());
 }
 
 const prisma = globalForPrisma.prisma ?? createPrismaClient();
